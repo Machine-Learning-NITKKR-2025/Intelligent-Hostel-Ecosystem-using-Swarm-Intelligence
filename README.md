@@ -1,103 +1,77 @@
-# 🏠 Intelligent Hostel Ecosystem using Swarm Intelligence
+# 🐝 Intelligent Hostel Ecosystem using Swarm Intelligence  
 
-## 📌 Project Overview
-This project proposes the development of an **intelligent hostel ecosystem** where **IoT devices** (sensors, actuators, smart meters) and **student mobile apps** collaborate as a **hive mind** using **swarm intelligence**.  
-Instead of relying on a single centralized AI, our system uses **decentralized, self-organizing agents** that collectively optimize hostel operations.  
+## 📌 Project Overview  
+This project proposes a **decentralized, swarm-intelligent facility management system** for hostels. Instead of relying on centralized servers, IoT devices and student apps collaborate like a **hive mind** to:  
+- Reduce energy waste ⚡  
+- Predict maintenance needs 🔧  
+- Improve student well-being 🌱  
+- Ensure privacy via **anonymized and federated learning** 🔒  
 
-The ecosystem aims to:
-- ⚡ **Optimize energy consumption** (lighting, HVAC, water heating)  
-- 🔧 **Predict maintenance needs** (AC, pumps, water heaters, doors, etc.)  
-- 🙂 **Enhance student well-being** through anonymized comfort feedback and usage data  
-- 🔒 **Ensure privacy & scalability** via decentralized decision-making  
-
----
-
-## 🎯 Motivation
-Hostel facility management in Indian campuses (like NIT Kurukshetra) faces challenges:  
-- High energy costs  
-- Unpredictable equipment failures  
-- Food, water, and electricity wastage  
-- Student dissatisfaction with comfort levels  
-
-By applying **swarm intelligence + ML**, we aim to make hostels:  
-- More **efficient**  
-- More **resilient** (graceful degradation even if the cloud is offline)  
-- More **student-friendly**  
+Inspired by ants, bees, and birds, the system applies **swarm intelligence** principles to make hostels **scalable, resilient, and industry-ready**.  
 
 ---
 
-## 🔬 Problem Definition
-- **Input:** IoT sensor data (energy meters, occupancy, vibration, temp/humidity), student app feedback (comfort, schedules).  
-- **Output:** Optimized control actions (e.g., dim lights, adjust AC setpoints), anomaly alerts for maintenance, well-being recommendations.  
-- **Scope:** A proof-of-concept implementation in one hostel block with simulated or partial real IoT data.  
+## 🎯 Problem Statement  
+Traditional hostel management systems are centralized, which leads to:  
+- Scalability issues as the system grows  
+- High infrastructure and maintenance costs  
+- Downtime risk if the central server fails  
+- Lack of adaptive energy savings and real-time student comfort optimization  
+
+Our solution is a **self-optimizing, decentralized ecosystem** where IoT devices and student apps act as cooperative agents.  
 
 ---
 
-## 📊 Data Sources
-- Public smart building datasets (energy use, occupancy).  
-- IoT sensor data (energy meters, motion sensors, vibration sensors).  
-- Simulated data for hostel scenarios (if real data unavailable).  
-- Student mobile app feedback (anonymized surveys, comfort ratings).  
+## 📊 Dataset  
+We will combine **real-time and historical data**:  
+- **IoT sensor data**: energy use, temperature, humidity, occupancy, device health  
+- **Student app data**: feedback, comfort ratings, usage patterns (anonymized)  
+- **Facility logs**: maintenance records and breakdown history  
+
+Synthetic/simulated datasets will be used initially if real IoT data is unavailable.  
 
 ---
 
-## 🛠️ Approach & Methods
-- **Swarm Intelligence Algorithms**:  
-  - Particle Swarm Optimization (PSO)  
-  - Gossip protocols for decentralized coordination  
-  - Stigmergy-style local signaling for occupancy-driven control  
+## 🛠️ Approach & Techniques  
+We will apply a combination of **machine learning + swarm intelligence**:  
+- **Multi-Agent Reinforcement Learning (MARL):** decentralized decision-making  
+- **Anomaly Detection:** predictive maintenance from device patterns  
+- **Federated Learning:** local model training without sharing raw student data  
+- **Swarm Optimization Algorithms:** Particle Swarm Optimization (PSO), Ant Colony Optimization (ACO) for balancing energy usage  
 
-- **Machine Learning Models**:  
-  - Regression models for energy use prediction  
-  - Anomaly detection (Isolation Forest, Autoencoders) for predictive maintenance  
-  - Federated Learning for privacy-preserving model updates  
-
-- **Implementation Stack**:  
-  - **Edge**: Raspberry Pi / IoT gateways, Python, MQTT  
-  - **Cloud (optional)**: Data aggregation, dashboard (Grafana)  
-  - **Mobile App**: Feedback collection (React Native / Android)  
+Baseline models (regression, decision trees, clustering) will be used for comparison.  
 
 ---
 
-## 📈 Evaluation Plan
-- Energy savings (%) compared to baseline.  
-- Accuracy of maintenance predictions.  
-- System resilience (local control during cloud/network outage).  
-- Student satisfaction from app surveys.  
+## 📈 Evaluation Plan  
+The proof-of-concept will be tested against the following metrics:  
+- **Energy Efficiency:** % reduction in wasted energy  
+- **Prediction Accuracy:** anomaly detection precision/recall  
+- **Resilience:** performance under device/server failure simulations  
+- **Student Well-being:** comfort index from anonymized feedback  
 
 ---
 
-## 👥 Team Roles
-- **Member 1:** Data collection & preprocessing (IoT + public datasets).  
-- **Member 2:** ML models (energy prediction, anomaly detection).  
-- **Member 3:** Swarm intelligence algorithms & integration with student app.  
+## 👥 Team Roles & Timeline  
+- **Student 1 (Research Lead):** Literature review, architecture design, documentation  
+- **Student 2 (Data Lead):** Data collection, preprocessing, EDA  
+- **Student 3 (Model Lead):** Swarm ML models, simulations, evaluation  
+
+**Timeline (Milestones):**  
+- ✅ Proposal – 10 Sept  
+- 📊 Data Collection & EDA – 22 Sept  
+- 🤖 Baseline Model – 6 Oct  
+- 📑 Intermediate Report & Code – 17 Oct  
+- 🏁 Final Report & Presentation – Nov  
 
 ---
 
-## 📅 Timeline (Milestones)
-- **Week 1–2:** Setup repo, gather datasets, finalize architecture.  
-- **Week 3–4:** Data collection + EDA.  
-- **Week 5–6:** Baseline ML models (energy prediction, anomaly detection).  
-- **Week 7–8:** Implement swarm intelligence controllers.  
-- **Week 9–10:** Integrate student app feedback.  
-- **Week 11–12:** Evaluation, results, and final report.  
+## 🚀 Expected Outcomes  
+- Working **proof-of-concept system** in Jupyter Notebook + Python scripts  
+- Demonstrated **energy savings & predictive maintenance** in a simulated hostel  
+- Framework that is **scalable, resilient, and privacy-preserving**  
+- Strong potential for **real-world deployment in universities and smart cities**  
 
 ---
 
-## 📂 Deliverables
-- Proposal (2 pages)  
-- Intermediate & Final Reports (IEEE-style)  
-- Jupyter Notebooks (ML models, EDA, simulations)  
-- Code for edge agent + swarm controller  
-- Mobile app prototype (feedback collection)  
-- Presentation slides  
-
----
-
-## 📜 Declaration on AI Tool Usage
-This project may use AI tools (like ChatGPT, Copilot) **for brainstorming, documentation, and boilerplate code**, but all ML models, algorithms, and results will be **understood, explained, and implemented** by the team. Proper credits will be included in the final report.
-
----
-
-## 🚀 Goal
-To demonstrate a **proof-of-concept** that shows how **decentralized swarm intelligence + ML** can solve **real-world hostel facility management problems** better than a standard centralized AI system, making it a **cutting-edge and industry-ready project**.
+## 📂 Repository Structure  
