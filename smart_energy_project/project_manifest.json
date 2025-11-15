@@ -1,0 +1,6 @@
+{
+  "project": "Smart Energy Prediction System",
+  "author": "Niket Sarkar (delivered by ChatGPT)",
+  "dataset_expected": "hostel_energy_data_3hourly.csv",
+  "notes": "Place dataset at data/hostel_energy_data_3hourly.csv before running, or update RAW_PATH in scripts/data_prep.py"
+}

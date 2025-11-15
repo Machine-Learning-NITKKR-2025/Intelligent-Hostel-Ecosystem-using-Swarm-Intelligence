@@ -1,0 +1,169 @@
+"""Train models script
+- Loads data/features.csv
+- Supports two tasks:
+  1) short-term forecasting: predict next sample using lag features (time-aware)
+  2) long-term forecasting: daily aggregated forecast up to 1 month
+- Saves trained models into models/ and predictions into outputs/
+"""
+import pandas as pd
+import numpy as np
+from pathlib import Path
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+import joblib
+
+FEATURES = Path(__file__).resolve().parents[1] / "data" / "features.csv"
+MODELS_DIR = Path(__file__).resolve().parents[1] / "models"
+OUT_DIR = Path(__file__).resolve().parents[1] / "outputs"
+MODELS_DIR.mkdir(parents=True, exist_ok=True)
+OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+def metrics(y_true, y_pred):
+    mae = mean_absolute_error(y_true, y_pred)
+    # older sklearn versions don't accept squared=False, so compute RMSE manually:
+    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    r2 = r2_score(y_true, y_pred)
+    return dict(MAE=mae, RMSE=rmse, R2=r2)
+
+
+def train_short_term(df):
+    # Build features for short-term modeling (robust)
+    # select candidate feature columns (lags + common datetime parts + rolling)
+    candidate_features = [c for c in df.columns if c.startswith('lag_') or c in ['hour','weekday','is_weekend','month','roll_mean_3','roll_mean_8']]
+    # keep only columns that actually exist
+    feature_cols = [c for c in candidate_features if c in df.columns]
+    if len(feature_cols) == 0:
+        raise RuntimeError("No candidate feature columns found for short-term training. Available columns: " + ", ".join(df.columns))
+
+    # Prepare X and y
+    X = df[feature_cols].copy()
+    y = df['energy_consumption_kwh']
+
+    # Drop obvious non-numeric columns if any slipped in (e.g., timestamp-like or object dtypes)
+    non_numeric = X.select_dtypes(include=['object', 'datetime', 'timedelta']).columns.tolist()
+    if non_numeric:
+        print("Dropping non-numeric columns from features:", non_numeric)
+        X = X.drop(columns=non_numeric)
+
+    # Coerce remaining columns to numeric (safe) and impute median for any NaNs created
+    for col in X.columns:
+        X[col] = pd.to_numeric(X[col], errors='coerce')
+        if X[col].isna().any():
+            med = X[col].median()
+            X[col] = X[col].fillna(med)
+
+    # Final check
+    if X.shape[1] == 0:
+        raise RuntimeError("No numeric feature columns available after coercion. Columns attempted: " + ", ".join(feature_cols))
+
+    # time-based split if timestamp-like column exists, otherwise index-based split
+    # we assume df is already time-sorted from features.py
+    split = int(0.8 * len(df))
+    X_train, X_test = X.iloc[:split], X.iloc[split:]
+    y_train, y_test = y.iloc[:split], y.iloc[split:]
+
+    print("Short-term training using features:", list(X.columns))
+    # Define models
+    models = {
+        'LinearRegression': LinearRegression(),
+        'RandomForest': RandomForestRegressor(n_estimators=200, random_state=42),
+        'GradientBoosting': GradientBoostingRegressor(random_state=42)
+    }
+
+    results = {}
+    for name, m in models.items():
+        m.fit(X_train, y_train)
+        pred = m.predict(X_test)
+        results[name] = metrics(y_test, pred)
+        joblib.dump(m, MODELS_DIR / f"{name}_short.joblib")
+        pd.DataFrame({'y_true': y_test, 'y_pred': pred}).to_csv(OUT_DIR / f"predictions_{name}_short.csv", index=False)
+
+    pd.DataFrame(results).T.to_csv(OUT_DIR / 'short_term_metrics.csv')
+    print('Short-term training complete.')
+
+def train_long_term(df):
+    # Robust datetime detection for daily aggregation
+    import warnings
+    dt_col = None
+    # 1) use existing datetime-typed column if any
+    for c in df.columns:
+        if pd.api.types.is_datetime64_any_dtype(df[c]):
+            dt_col = c
+            break
+    # 2) try parsing columns to datetime and choose first with >50% non-null
+    if dt_col is None:
+        for c in df.columns:
+            try:
+                parsed = pd.to_datetime(df[c], errors='coerce')
+                if parsed.notna().mean() > 0.5 and parsed.nunique() > 2:
+                    df[c] = parsed
+                    dt_col = c
+                    break
+            except Exception:
+                continue
+
+    if dt_col is not None:
+        df['date'] = pd.to_datetime(df[dt_col], errors='coerce').dt.date
+    else:
+        print("No datetime column found for long-term resampling — creating a synthetic daily index from the row index. Long-term forecasts may be meaningless.")
+        df = df.copy()
+        rng = pd.date_range(end=pd.Timestamp.today(), periods=len(df), freq='D')
+        df['date'] = rng.date
+
+    daily = df.copy()
+    daily['date'] = pd.to_datetime(daily['date'])
+    daily['date'] = pd.to_datetime(daily['date'], errors='coerce')
+    daily = daily.set_index('date').resample('D').mean(numeric_only=True).reset_index()
+    daily = daily.dropna(subset=['energy_consumption_kwh']).reset_index(drop=True)
+
+    # If not enough daily points, skip long-term training gracefully
+    if len(daily) < 2:
+        print("Warning: forced continue despite insufficient daily data points for long-term (monthly) forecasting.\n")
+
+    if len(daily) < 30:
+        print('Warning: less than 30 daily points after resampling; long-term forecasts will be limited.')
+
+    for lag in range(1,8):
+        daily[f'lag_{lag}'] = daily['energy_consumption_kwh'].shift(lag)
+    daily['roll7'] = daily['energy_consumption_kwh'].shift(1).rolling(window=7, min_periods=1).mean()
+    daily = daily.dropna().reset_index(drop=True)
+
+    feature_cols = [c for c in daily.columns if c.startswith('lag_') or c == 'roll7']
+    if len(feature_cols) == 0 or len(daily) < 2:
+        print("After creating lag features, not enough samples for training long-term model. Skipping.")
+        OUT_DIR.mkdir(parents=True, exist_ok=True)
+        import pandas as _pd
+        _pd.DataFrame({'MAE':[float('nan')],'RMSE':[float('nan')],'R2':[float('nan')]}).to_csv(OUT_DIR / 'long_term_metrics.csv', index=False)
+        return
+
+    X = daily[feature_cols]
+    y = daily['energy_consumption_kwh']
+    split = int(0.8 * len(daily))
+    if split == 0:
+        split = 1
+    X_train, X_test = X.iloc[:split], X.iloc[split:]
+    y_train, y_test = y.iloc[:split], y.iloc[split:]
+
+    if len(X_train) < 1 or len(X_test) < 1:
+        print("Insufficient train/test split for long-term model. Skipping.")
+        OUT_DIR.mkdir(parents=True, exist_ok=True)
+        import pandas as _pd
+        _pd.DataFrame({'MAE':[float('nan')],'RMSE':[float('nan')],'R2':[float('nan')]}).to_csv(OUT_DIR / 'long_term_metrics.csv', index=False)
+        return
+
+    model = RandomForestRegressor(n_estimators=200, random_state=42)
+    model.fit(X_train, y_train)
+    pred = model.predict(X_test)
+    joblib.dump(model, MODELS_DIR / 'rf_long.joblib')
+    pd.DataFrame({'y_true': y_test, 'y_pred': pred}).to_csv(OUT_DIR / 'predictions_long.csv', index=False)
+    pd.DataFrame(metrics(y_test, pred), index=[0]).to_csv(OUT_DIR / 'long_term_metrics.csv', index=False)
+    print('Long-term training complete. Metrics saved to outputs/long_term_metrics.csv')
+
+def main():
+    df = pd.read_csv(FEATURES)
+    train_short_term(df)
+    train_long_term(df)
+
+if __name__ == '__main__':
+    main()

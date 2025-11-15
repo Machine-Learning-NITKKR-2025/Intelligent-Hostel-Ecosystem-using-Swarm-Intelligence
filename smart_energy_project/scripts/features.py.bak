@@ -1,0 +1,64 @@
+"""Feature engineering script
+- Reads cleaned data from data/cleaned.csv
+- Extracts datetime features (hour, day, month, weekday, is_weekend)
+- Creates lag features for energy (t-1, t-2, t-3) and rolling means
+- Saves features to data/features.csv
+"""
+import pandas as pd
+import numpy as np
+from pathlib import Path
+
+CLEANED = Path(__file__).resolve().parents[1] / "data" / "cleaned.csv"
+OUT = Path(__file__).resolve().parents[1] / "data" / "features.csv"
+
+def add_datetime_features(df, dt_col):
+    df['hour'] = df[dt_col].dt.hour
+    df['day'] = df[dt_col].dt.day
+    df['weekday'] = df[dt_col].dt.weekday
+    df['is_weekend'] = df['weekday'] >= 5
+    df['month'] = df[dt_col].dt.month
+    return df
+
+def add_lag_features(df, target='energy_consumption_kwh', lags=[1,2,3]):
+    for lag in lags:
+        df[f'lag_{lag}'] = df[target].shift(lag)
+    # rolling windows: 3 and 8 samples (since dataset is 3-hourly)
+    df['roll_mean_3'] = df[target].shift(1).rolling(window=3, min_periods=1).mean()
+    df['roll_mean_8'] = df[target].shift(1).rolling(window=8, min_periods=1).mean()
+    return df
+
+def main():
+    df = pd.read_csv(CLEANED, parse_dates=True, infer_datetime_format=True)
+    # detect datetime column
+    dt_cols = [c for c in df.columns if pd.api.types.is_datetime64_any_dtype(df[c])]
+    if len(dt_cols) == 0:
+        # try to parse first column that looks like datetime
+        for c in df.columns:
+            parsed = pd.to_datetime(df[c], errors='coerce')
+            if parsed.notna().mean() > 0.7:
+                df[c] = parsed
+                dt_cols = [c]
+                break
+    if len(dt_cols) == 0:
+        raise RuntimeError('No datetime column found. Please ensure cleaned.csv has a datetime column.')
+    dt_col = dt_cols[0]
+    df[dt_col] = pd.to_datetime(df[dt_col])
+
+    df = add_datetime_features(df, dt_col)
+    df = df.sort_values(dt_col).reset_index(drop=True)
+
+    # ensure target exists
+    if 'energy_consumption_kwh' not in df.columns:
+        raise RuntimeError('Target column energy_consumption_kwh not found in cleaned data.')
+
+    df = add_lag_features(df, target='energy_consumption_kwh', lags=[1,2,3,4,8])
+    # drop rows with NaN in lag features
+    df = df.dropna().reset_index(drop=True)
+
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(OUT, index=False)
+    print(f"Saved features to: {OUT} (shape: {df.shape})")
+
+
+if __name__ == '__main__':
+    main()
