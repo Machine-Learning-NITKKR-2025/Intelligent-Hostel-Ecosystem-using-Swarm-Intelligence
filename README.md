@@ -25,7 +25,7 @@ smart_energy_project/
 
 ## How to run
 1. Put the dataset at `data/hostel_energy_data_3hourly.csv` (or update path in scripts).
-2. Create a virtualenv and install dependencies:
+2. Create a virtualenv and install dependencies inside the project folder:
 ```bash
 python -m venv venv
 source venv/bin/activate
